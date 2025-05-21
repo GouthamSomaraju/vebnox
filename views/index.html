@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Upscaler</title>
+
+    <style>
+      body {
+        background: #f0f4f8;
+        font-family: "Segoe UI", sans-serif;
+        text-align: center;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: auto;
+      }
+
+      #imageInput {
+        display: none;
+      }
+
+      .upload-label {
+        display: inline-block;
+        background-color: #52dde0;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-bottom: 20px;
+        transition: background-color 0.3s;
+      }
+
+      .upload-label:hover {
+        background-color: #74dadc;
+      }
+
+      select,
+      button {
+        margin: 10px;
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: 1px solid #aaa;
+      }
+
+      button {
+        background-color: #52dde0;
+        color: white;
+        transition: 0.3s;
+      }
+
+      button:hover {
+        background-color: #74dadc;
+        cursor: pointer;
+      }
+
+      .loader {
+        display: none;
+        color: #000000;
+        font-weight: bold;
+        margin: 20px 0;
+      }
+
+      .images {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 20px;
+      }
+
+      .images img {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 6px;
+        object-fit: contain;
+      }
+
+      a {
+        display: inline-block;
+        margin-top: 10px;
+        text-decoration: none;
+        background: #d5910b;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+      }
+
+      #selectedPreview img {
+        max-height: 200px;
+        margin-top: 10px;
+        border: 2px solid #5acaea;
+        border-radius: 6px;
+      }
+
+      #selectedPreview p {
+        margin-top: 5px;
+        font-weight: bold;
+        color: #45a1bb;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Image Upscaler</h1>
+
+      <label class="upload-label" for="imageInput">Choose Image</label>
+      <input type="file" id="imageInput" accept="image/*" />
+
+      <div id="selectedPreview"></div>
+
+      <select id="scale">
+        <option value="2">2x</option>
+        <option value="4">4x</option>
+      </select>
+      <button id="uploadBtn">Upscale</button>
+
+      <div class="loader" id="loader">Upscaling...</div>
+
+      <div class="images" id="imagePreview"></div>
+    </div>
+
+    <script>
+      const fileInput = document.getElementById("imageInput");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const loader = document.getElementById("loader");
+      const imagePreview = document.getElementById("imagePreview");
+      const selectedPreview = document.getElementById("selectedPreview");
+
+      let selectedFile = null;
+
+      function showSelectedImagePreview(file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          selectedPreview.innerHTML = `
+            <p>Selected: ${file.name}</p>
+            `;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      fileInput.addEventListener("change", () => {
+        selectedFile = fileInput.files[0];
+        if (selectedFile) showSelectedImagePreview(selectedFile);
+      });
+
+      uploadBtn.addEventListener("click", async () => {
+        if (!selectedFile) {
+          alert("Please select an image.");
+          return;
+        }
+
+        loader.style.display = "block";
+        imagePreview.innerHTML = "";
+
+        const scale = document.getElementById("scale").value;
+        const formData = new FormData();
+        formData.append("image", selectedFile);
+        formData.append("scale", scale);
+
+        const res = await fetch("/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        loader.style.display = "none";
+
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+
+        imagePreview.innerHTML = `
+          <div>
+            <h3>Original</h3>
+            <img src="${data.original}" alt="Original" />
+          </div>
+          <div>
+            <h3>Upscaled (${scale}x)</h3>
+            <img src="${data.upscaled}" alt="Upscaled ${scale}x" style="transform: scale(${scale}); transform-origin: top left;" />
+            <a href="${data.upscaled}" download>⬇️ Download ${scale}x Image</a>
+          </div>
+        `;
+      });
+    </script>
+  </body>
+</html>
